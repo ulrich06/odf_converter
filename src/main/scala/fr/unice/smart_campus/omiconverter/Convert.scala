@@ -26,8 +26,13 @@
 
 package fr.unice.smart_campus.omiconverter
 
+import java.io.IOException
+
 import fr.i3s.modalis.cosmic.organizational.{Catalog, Container, Sensor}
 import fr.unice.smartcampus.SmartCampusOrganization
+import play.api.libs.json.{JsObject, Json}
+
+import scala.xml.Elem
 
 /**
   * Created by Cyril Cecchinel - I3S Laboratory on 14/11/2016.
@@ -36,21 +41,49 @@ object Convert {
 
   def apply(organization:Catalog) = convert(organization)
 
+  def retrieveLastValue(sensorName: String) = {
+    val URL = s"http://smartcampus.unice.fr/sensors/$sensorName/data/last"
+    try {
+      val source = Json.parse(scala.io.Source.fromURL(URL).mkString)
+      val date = (source \ "values" \\ "date").head.as[String]
+      val value = (source \ "values" \\ "value").head.as[String]
+      (date, value)
+    } catch {case ioe: IOException => ((System.currentTimeMillis() / 1000).toString, "NULL")}
+  }
+
+  def buildLastValue(sensorName:String) = {
+    val lastValue = retrieveLastValue(sensorName)
+      <Object>
+        <id>{s"Measurement"}</id>
+        <InfoItem name="LastValue"><value>{lastValue._2}</value></InfoItem>
+        <InfoItem name="LastDate"><value>{lastValue._1}</value></InfoItem>
+      </Object>
+  }
   def convertSensors(sensor: Sensor) = {
     <Object>
       <id>{sensor.name}</id>
       <InfoItem name="GivenName"><value>{sensor.name}</value></InfoItem>
       <InfoItem name="Observes"><value>{sensor.observes.name}</value></InfoItem>
+      {buildLastValue(sensor.name)}
     </Object>
   }
 
+  def convertContainer(container: Container):Elem = {
+    <Object>
+    <id>{container.name}</id>
+      <InfoItem name="GivenName"><value>{container.name}</value></InfoItem>
+      <InfoItem name="ContainerType"><value>{container.cType}</value></InfoItem>
+      {container.contains.collect{case x:Sensor => x}.map(convertSensors) ++
+      container.contains.collect{case x:Container => x}.map(convertContainer)}
+    </Object>
+  }
 
   def convert(organization:Catalog) = {
       <omi:omiEnvelope xmlns:omi="omi.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="omi.xsd omi.xsd" version="1.0" ttl="-1">
         <omi:write msgformat="odf" targetType="device">
           <omi:msg xmlns="odf.xsd" xsi:schemaLocation="odf.xsd odf.xsd">
             <Objects>
-              {organization.getSensors(organization.root.name).map(convertSensors)}
+             {convertContainer(organization.root)}
             </Objects>
           </omi:msg>
         </omi:write>
