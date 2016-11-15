@@ -24,13 +24,16 @@
  * ***********************************************************************
  */
 
-package fr.unice.smart_campus.omiconverter
+package fr.unice.smart_campus.odfconverter
 
 import java.io.IOException
 
 import fr.i3s.modalis.cosmic.organizational.{Catalog, Container, Sensor}
 import fr.unice.smartcampus.SmartCampusOrganization
-import play.api.libs.json.{JsObject, Json}
+import org.apache.commons.httpclient.HttpClient
+import org.apache.commons.httpclient.methods.{PostMethod, StringRequestEntity}
+import org.apache.http.impl.client.DefaultHttpClient
+import play.api.libs.json.Json
 
 import scala.xml.Elem
 
@@ -91,6 +94,16 @@ object Convert {
   }
 }
 
-object Run extends App{
-  println(Convert(SmartCampusOrganization.catalog))
+object SendConfig extends App{
+
+    val body = Convert(SmartCampusOrganization.catalog).toString()
+    val client = new DefaultHttpClient()
+    val strURL = "http://sparks-vm26.i3s.unice.fr:8080"
+    val post = new PostMethod(strURL)
+    val requestEntity = new StringRequestEntity(Convert(SmartCampusInfra.catalog).toString())
+    post.setRequestEntity(requestEntity)
+    val httpClient = new HttpClient()
+    httpClient.executeMethod(post)
+    println(post.getResponseBodyAsString)
+
 }
