@@ -29,7 +29,6 @@ package fr.unice.smart_campus.odfconverter
 import java.io.IOException
 
 import fr.i3s.modalis.cosmic.organizational.{Catalog, Container, Sensor}
-import fr.unice.smartcampus.SmartCampusOrganization
 import org.apache.commons.httpclient.HttpClient
 import org.apache.commons.httpclient.methods.{PostMethod, StringRequestEntity}
 import org.apache.http.impl.client.DefaultHttpClient
@@ -54,30 +53,28 @@ object Convert {
     } catch {case ioe: IOException => ((System.currentTimeMillis() / 1000).toString, "NULL")}
   }
 
-  def buildLastValue(sensorName:String) = {
-    val lastValue = retrieveLastValue(sensorName)
-      <Object>
-        <id>{s"Measurement"}</id>
-        <InfoItem name="LastValue"><value>{lastValue._2}</value></InfoItem>
-        <InfoItem name="LastDate"><value>{lastValue._1}</value></InfoItem>
-      </Object>
-  }
   def convertSensors(sensor: Sensor) = {
-    <Object>
-      <id>{sensor.name}</id>
-      <InfoItem name="GivenName"><value>{sensor.name}</value></InfoItem>
-      <InfoItem name="Observes"><value>{sensor.observes.name}</value></InfoItem>
-      {buildLastValue(sensor.name)}
-    </Object>
+    val lastValue = retrieveLastValue(sensor.name)
+
+    <InfoItem name={sensor.name}>
+      <MetaData>
+        <InfoItem name="Observes"><value>{sensor.observes.name}</value></InfoItem>
+        <InfoItem name="LastDate"><value>{lastValue._1}</value></InfoItem>
+      </MetaData>
+      <value>{lastValue._2}</value>
+    </InfoItem>
   }
 
   def convertContainer(container: Container):Elem = {
-    <Object>
+    <Object type={container.cType.toString}>
     <id>{container.name}</id>
-      <InfoItem name="GivenName"><value>{container.name}</value></InfoItem>
       <InfoItem name="ContainerType"><value>{container.cType}</value></InfoItem>
-      {container.contains.collect{case x:Sensor => x}.map(convertSensors) ++
-      container.contains.collect{case x:Container => x}.map(convertContainer)}
+      {
+        container.contains.collect{case x:Sensor => x}.map(convertSensors)
+      }
+      {
+        container.contains.collect{case x:Container => x}.map(convertContainer)
+      }
     </Object>
   }
 
@@ -94,16 +91,15 @@ object Convert {
   }
 }
 
-object SendConfig extends App{
+object SendConfig extends App {
 
-    val body = Convert(SmartCampusOrganization.catalog).toString()
+    val body = Convert(SmartCampusInfra.catalog).toString()
     val client = new DefaultHttpClient()
-    val strURL = "http://sparks-vm26.i3s.unice.fr:8080"
+    val strURL = "http://localhost:8080"
     val post = new PostMethod(strURL)
     val requestEntity = new StringRequestEntity(Convert(SmartCampusInfra.catalog).toString())
     post.setRequestEntity(requestEntity)
     val httpClient = new HttpClient()
     httpClient.executeMethod(post)
     println(post.getResponseBodyAsString)
-
 }
