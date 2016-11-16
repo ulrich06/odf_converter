@@ -85,7 +85,7 @@ object SmartCampusInfra {
             Periodic("LIGHT_444", 300, "http://smartcampus.unice.fr/sensors/LIGHT_444/data/", SC_light)
           )),
           Container("Office 445", EContainerType.Room, Set(
-            Periodic("TEMP_445V", 300, "http://smartcampus.unice.fr/sensors/TEMP_445V/data/", SC_temperature_indoor),
+            Periodic("TEMP_445", 300, "http://smartcampus.unice.fr/sensors/TEMP_445V/data/", SC_temperature_indoor),
             Periodic("LIGHT_445", 300, "http://smartcampus.unice.fr/sensors/LIGHT_445/data", SC_light)
           )),
           Container("Office 449", EContainerType.Room, Set(
